@@ -1,9 +1,8 @@
 {
-  "name": "sites-worker-esm-starter",
+  "name": "task-companion",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "bash scripts/build.sh",
-    "validate": "node scripts/validate-artifact.mjs"
+    "build": "bash scripts/build.sh"
   }
 }

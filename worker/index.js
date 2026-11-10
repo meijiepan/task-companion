@@ -2,12 +2,14 @@
 const PAGE = __PAGE__;
 const URI = 'ui://task-companion/panel.html';
 const legalPage = kind => {
-  const privacy = kind==='privacy';
-  const heading=privacy?'Privacy / 隐私':'Terms / 使用条款';
+  const privacy = kind==='privacy', support=kind==='support';
+  const heading=privacy?'Privacy / 隐私':support?'Support / 支持':'Terms / 使用条款';
   const content=privacy
     ? '<p>Task Companion stores your project titles, task titles, completion times, and selected tasks in its hosted database. Records are linked to a Site-scoped ChatGPT user ID. The service does not intentionally store your ChatGPT conversation transcript or an OpenAI API key.</p><p>Task tools read or change tasks only when you or your assistant invoke them. Task content may be sent through ChatGPT when you use the plugin. Export and permanent deletion are available in the app. Hosting and platform providers process data to operate the service.</p><p>Task Companion 保存项目名称、任务名称、完成时间和当前选中的任务，并使用此站点专属的 ChatGPT 用户 ID 区分账号。本服务不主动保存聊天全文或 OpenAI API 密钥。你可以在应用中导出或永久删除任务数据。</p>'
+    : support
+    ? '<p>For a bug or account question, open an issue at <a href="https://github.com/meijiepan/task-companion/issues">github.com/meijiepan/task-companion/issues</a>. Include the steps and visible error, without posting task contents, keys, or private chat text.</p><p>如需帮助，请到 GitHub Issues 提交问题和复现步骤，不要公开任务内容、密钥或私人聊天。</p>'
     : '<p>Task Companion is an open-source task organizer provided as-is. You remain responsible for the content you enter and for checking task results. Do not store sensitive information you are unwilling to share with the hosting and ChatGPT platforms. You may stop using the service and delete your data at any time.</p><p>本工具按现状提供。请自行核对任务内容与结果；不要输入你不愿与托管平台及 ChatGPT 平台分享的敏感信息。你可以随时删除自己的数据。</p>';
-  return '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+heading+' · Task Companion</title><body style="font:16px/1.7 system-ui;max-width:720px;margin:40px auto;padding:20px;color:#244533"><a href="/">← Task Companion</a><h1>'+heading+'</h1>'+content+'<p><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p></body></html>';
+  return '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+heading+' · Task Companion</title><body style="font:16px/1.7 system-ui;max-width:720px;margin:40px auto;padding:20px;color:#244533"><a href="/">← Task Companion</a><h1>'+heading+'</h1>'+content+'<p><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/support">Support</a></p></body></html>';
 };
 const stamp = () => new Date().toISOString();
 const uuid = () => crypto.randomUUID();
@@ -135,7 +137,7 @@ export default {async fetch(req,env){
   try{
     if(path==='/mcp'&&req.method==='POST')return mcp(req,env);
     if(path==='/'&&req.method==='GET')return new Response(PAGE,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
-    if((path==='/privacy'||path==='/terms')&&req.method==='GET')return new Response(legalPage(path.slice(1)),{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+    if((path==='/privacy'||path==='/terms'||path==='/support')&&req.method==='GET')return new Response(legalPage(path.slice(1)),{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
     if(path==='/health'&&req.method==='GET')return response({ok:true});
     if(path==='/api/state'&&req.method==='GET')return user(req)?response(await state(env,user(req),url.searchParams.get('project_id'))):response({error:'Sign in required'},401);
     if(path==='/api/action'&&req.method==='POST'){

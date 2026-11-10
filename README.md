@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-这是待公开审核的 V1 源码。GanttProject 清单是可选演示数据。原先 127.0.0.1:8765 的私人测试数据不会自动上传；新站点从空白账号开始。Mac ChatGPT 桌面 App 的侧栏显示仍须实机验证，不能保证与网页版相同。
+网页版：[Task Companion](https://task-companion-20261109.maggie-pan.chatgpt.site)。公开源码：[GitHub](https://github.com/meijiepan/task-companion)。ChatGPT 插件目录公开仍需审核。GanttProject 清单是可选演示数据。原先 127.0.0.1:8765 的私人测试数据不会自动上传；新站点从空白账号开始。Mac ChatGPT 桌面 App 的侧栏显示仍须实机验证，不能保证与网页版相同。
 
 ## 目录
 
@@ -24,7 +24,7 @@
 bash scripts/build.sh
 ```
 
-部署前需要 Sites 项目、D1 数据库和 ChatGPT 登录。不能将此前无身份验证的 Phase 2 PoC 服务器公开。公开插件需要完成 OpenAI 审核与页面、视频、正反测试材料；见 [提交说明](https://developers.openai.com/plugins/deploy/submission)。
+部署前需要 Sites 项目、D1 数据库和 ChatGPT 登录。不能将此前无身份验证的 Phase 2 PoC 服务器公开。公开插件需要完成 OpenAI 审核与页面、视频、正反测试材料；见 [提交说明](https://developers.openai.com/plugins/deploy/submission)。支持页面：[/support](https://task-companion-20261109.maggie-pan.chatgpt.site/support)。
 
 ## 贡献
 
