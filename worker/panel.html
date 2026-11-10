@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task Companion</title>
+  <style>
+    :root{font-family:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#263c30;background:#f7faf6}*{box-sizing:border-box}body{margin:0;padding:17px}button,select{font:inherit;cursor:pointer}.top,.nav{display:flex;justify-content:space-between;align-items:center;gap:8px}h1{font-size:17px;margin:0}.lang,.nav button,select{background:white;border:1px solid #d8e5d8;border-radius:7px;padding:5px 8px;color:#367459}.nav button{flex:1;padding:9px}.nav button:disabled{opacity:.45;cursor:default}.sub{font-size:11px;color:#7d9382;margin:6px 0 16px}.bar{height:7px;background:#e0ebe0;border-radius:10px;overflow:hidden}.bar span{display:block;height:100%;background:#288260}.count{font-size:12px;color:#4b735b;margin:7px 0 18px}.row{display:flex;align-items:center;gap:7px;padding:8px;border-radius:8px;margin:3px 0}.row.selected{background:#e5f2e8}.row button.select{border:0;background:none;text-align:left;color:#2d4c3b;flex:1;padding:0}.row.parent{font-weight:750;margin-top:10px}.row input{accent-color:#258164}.status{font-size:11px;color:#6c8b74;margin-top:15px}.send{margin-top:10px;width:100%;border:0;border-radius:9px;background:#247b5c;color:white;padding:10px;font-weight:700}.projects{width:100%;margin:0 0 12px;padding:7px}.empty{font-size:13px;color:#6c8b74}
+  </style>
+</head>
+<body>
+  <div class="top"><h1>Task Companion</h1><button class="lang" id="lang">English</button></div>
+  <div class="sub" id="subtitle"></div><select class="projects" id="projects" hidden></select>
+  <div class="bar"><span id="bar"></span></div><div class="count" id="count"></div><div id="list"></div>
+  <div class="nav"><button id="prev"></button><button id="next"></button></div>
+  <button class="send" id="send"></button><div class="status" id="status"></div>
+  <script>
+    let locale='zh',state=null,projectId=null,rpcId=0;
+    const pendingRequests=new Map();
+    const rpcNotify=(method,params)=>window.parent.postMessage({jsonrpc:'2.0',method,params},'*');
+    const rpcRequest=(method,params)=>new Promise((resolve,reject)=>{const id=++rpcId;pendingRequests.set(id,{resolve,reject});window.parent.postMessage({jsonrpc:'2.0',id,method,params},'*')});
+    window.addEventListener('message',event=>{if(event.source!==window.parent)return;const message=event.data;if(!message||message.jsonrpc!=='2.0')return;if(typeof message.id==='number'){const pending=pendingRequests.get(message.id);if(!pending)return;pendingRequests.delete(message.id);message.error?pending.reject(message.error):pending.resolve(message.result);return}if(message.method==='ui/notifications/tool-result'){const data=unpack(message.params);if(data?.projects){state=data;projectId=data.project?.id;view()}}});
+    const bridgeReady=rpcRequest('ui/initialize',{appInfo:{name:'task-companion-panel',version:'1.0.0'},appCapabilities:{},protocolVersion:'2026-01-26'}).then(()=>rpcNotify('ui/notifications/initialized',{}));
+    const $=id=>document.getElementById(id);
+    const words={zh:{subtitle:'任务与对话一起推进',count:(d,t)=>'已完成 '+d+'/'+t,prev:'上一步',next:'下一步',send:'围绕当前任务继续聊天',ready:'已连接云端任务',unavailable:'任务服务暂时不可用',sent:'已发送到当前对话',empty:'没有项目。请先到网页版创建。'},en:{subtitle:'Keep tasks beside your chat',count:(d,t)=>d+'/'+t+' completed',prev:'Previous',next:'Next',send:'Continue this task in chat',ready:'Connected to cloud tasks',unavailable:'Task service unavailable',sent:'Sent to this chat',empty:'No projects yet. Create one on the website.'}};
+    const label=t=>locale==='en'?t.title_en||t.title_zh:t.title_zh;
+    const leaves=()=>state.tasks.filter(t=>!state.tasks.some(child=>child.parent_id===t.id));
+    const depth=task=>{let count=0,parent=task.parent_id;while(parent&&count<8){const found=state.tasks.find(t=>t.id===parent);if(!found)break;count++;parent=found.parent_id}return count};
+    const view=()=>{if(!state)return;const w=words[locale],steps=leaves(),index=steps.findIndex(t=>t.id===state.project?.selected_task_id);$('subtitle').textContent=w.subtitle;$('count').textContent=w.count(state.progress.done,state.progress.total);$('bar').style.width=state.progress.total?Math.round(state.progress.done/state.progress.total*100)+'%':'0%';$('lang').textContent=locale==='zh'?'English':'中文';$('send').textContent=w.send;$('prev').textContent=w.prev;$('next').textContent=w.next;$('prev').disabled=index<=0;$('next').disabled=index<0||index>=steps.length-1;$('projects').replaceChildren();for(const p of state.projects){const opt=document.createElement('option');opt.value=p.id;opt.textContent=label(p);opt.selected=p.id===projectId;$('projects').append(opt)}$('projects').hidden=state.projects.length<2;$('list').replaceChildren();for(const task of state.tasks){const row=document.createElement('div');row.className='row '+(state.tasks.some(child=>child.parent_id===task.id)?'parent':'')+(task.id===state.project.selected_task_id?' selected':'');row.style.marginLeft=Math.min(depth(task),5)*16+'px';const check=document.createElement('input');check.type='checkbox';check.checked=!!task.completed_at;check.disabled=state.tasks.some(child=>child.parent_id===task.id);check.onchange=async()=>{await action('set_task_status',{project_id:projectId,task_id:task.id,completed:check.checked})};const button=document.createElement('button');button.className='select';button.textContent=label(task);button.onclick=async()=>{await action('select_task',{project_id:projectId,task_id:task.id})};row.append(check,button);$('list').append(row)}if(!state.project){const e=document.createElement('p');e.className='empty';e.textContent=w.empty;$('list').append(e)}$('status').textContent=w.ready};
+    function unpack(result){if(result?.structuredContent)return result.structuredContent;const text=result?.content?.find(x=>x.type==='text'&&x.text)?.text;return text?JSON.parse(text):null}
+    async function action(name,args){try{await bridgeReady;const data=unpack(await rpcRequest('tools/call',{name,arguments:args}));if(data?.projects){state=data;projectId=data.project?.id;view()}else throw Error('No task data')}catch(e){console.error('Task Companion tool call failed',e);$('status').textContent=words[locale].unavailable}}
+    $('lang').onclick=()=>{locale=locale==='zh'?'en':'zh';view()};
+    $('projects').onchange=()=>{projectId=$('projects').value;action('get_tasks',{project_id:projectId})};
+    $('prev').onclick=()=>{const steps=leaves(),index=steps.findIndex(t=>t.id===state.project?.selected_task_id);if(index>0)action('select_task',{project_id:projectId,task_id:steps[index-1].id})};
+    $('next').onclick=()=>{const steps=leaves(),index=steps.findIndex(t=>t.id===state.project?.selected_task_id);if(index>=0&&index<steps.length-1)action('select_task',{project_id:projectId,task_id:steps[index+1].id})};
+    $('send').onclick=async()=>{const task=state?.tasks.find(t=>t.id===state.project?.selected_task_id);if(!task)return;const prompt=locale==='zh'?'请继续指导我完成“'+label(task)+'”，并在我要求时更新 Task Companion 中的任务状态。':'Please help me complete “'+label(task)+'” and update Task Companion only when I ask.';try{if(!window.openai?.sendFollowUpMessage)throw Error('No bridge');const result=window.openai.sendFollowUpMessage({prompt});$('status').textContent=words[locale].sent;await result}catch(e){$('status').textContent=words[locale].unavailable}};
+    action('get_tasks',{});
+  </script>
+</body></html>

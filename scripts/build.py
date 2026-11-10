@@ -10,8 +10,10 @@ if dist.exists():
 (dist / ".openai").mkdir()
 source = (root / "worker" / "index.js").read_text()
 page = (root / "worker" / "page.html").read_text()
+panel = (root / "worker" / "panel.html").read_text()
 assert source.count("__PAGE__") == 2  # comment and expression
 source = source.replace("const PAGE = __PAGE__;", "const PAGE = " + json.dumps(page, ensure_ascii=False) + ";")
+source = source.replace("const PANEL = __PANEL__;", "const PANEL = " + json.dumps(panel, ensure_ascii=False) + ";")
 (dist / "server" / "index.js").write_text(source)
 shutil.copy2(root / ".openai" / "hosting.json", dist / ".openai" / "hosting.json")
 print("Built", dist)

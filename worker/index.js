@@ -1,5 +1,6 @@
 // The build inserts page.html at __PAGE__.
 const PAGE = __PAGE__;
+const PANEL = __PANEL__;
 const URI = 'ui://task-companion/panel.html';
 const UI_MIME = 'text/html;profile=mcp-app';
 const legalPage = kind => {
@@ -125,7 +126,7 @@ async function mcp(req,env){
   if(method==='ping')return rpc(id,{});
   if(method==='tools/list')return rpc(id,{tools});
   if(method==='resources/list')return rpc(id,{resources:[{uri:URI,name:'Task Companion',mimeType:UI_MIME}]});
-  if(method==='resources/read')return params.uri===URI?rpc(id,{contents:[{uri:URI,mimeType:UI_MIME,text:PAGE.replace('<script id="app-script">','<script>window.TASK_COMPANION_EMBEDDED=true;</script><script id="app-script">')}]}):err(id,-32602,'Unknown resource');
+  if(method==='resources/read')return params.uri===URI?rpc(id,{contents:[{uri:URI,mimeType:UI_MIME,text:PANEL}]}):err(id,-32602,'Unknown resource');
   if(method==='tools/call'){
     if(!defs.some(x=>x[0]===params.name))return err(id,-32602,'Unknown tool');
     try{const data=await action(env,user(req),params.name,params.arguments||{});return rpc(id,{content:[{type:'text',text:JSON.stringify(data)}],structuredContent:data})}
