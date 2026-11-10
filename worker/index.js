@@ -1,6 +1,7 @@
 // The build inserts page.html at __PAGE__.
 const PAGE = __PAGE__;
 const URI = 'ui://task-companion/panel.html';
+const UI_MIME = 'text/html;profile=mcp-app';
 const legalPage = kind => {
   const privacy = kind==='privacy', support=kind==='support';
   const heading=privacy?'Privacy / 隐私':support?'Support / 支持':'Terms / 使用条款';
@@ -123,8 +124,8 @@ async function mcp(req,env){
   if(method==='initialize')return rpc(id,{protocolVersion:'2025-06-18',capabilities:{tools:{},resources:{}},serverInfo:{name:'task-companion',version:'1.0.0'}});
   if(method==='ping')return rpc(id,{});
   if(method==='tools/list')return rpc(id,{tools});
-  if(method==='resources/list')return rpc(id,{resources:[{uri:URI,name:'Task Companion',mimeType:'text/html'}]});
-  if(method==='resources/read')return params.uri===URI?rpc(id,{contents:[{uri:URI,mimeType:'text/html',text:PAGE.replace('<script id="app-script">','<script>window.TASK_COMPANION_EMBEDDED=true;</script><script id="app-script">')}]}):err(id,-32602,'Unknown resource');
+  if(method==='resources/list')return rpc(id,{resources:[{uri:URI,name:'Task Companion',mimeType:UI_MIME}]});
+  if(method==='resources/read')return params.uri===URI?rpc(id,{contents:[{uri:URI,mimeType:UI_MIME,text:PAGE.replace('<script id="app-script">','<script>window.TASK_COMPANION_EMBEDDED=true;</script><script id="app-script">')}]}):err(id,-32602,'Unknown resource');
   if(method==='tools/call'){
     if(!defs.some(x=>x[0]===params.name))return err(id,-32602,'Unknown tool');
     try{const data=await action(env,user(req),params.name,params.arguments||{});return rpc(id,{content:[{type:'text',text:JSON.stringify(data)}],structuredContent:data})}
