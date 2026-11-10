@@ -1,7 +1,7 @@
 // The build inserts page.html at __PAGE__.
 const PAGE = __PAGE__;
 const PANEL = __PANEL__;
-const URI = 'ui://task-companion/panel.html';
+const URI = 'ui://task-companion/panel-v4.html';
 const UI_MIME = 'text/html;profile=mcp-app';
 const CAPABILITIES = {tools:{},resources:{},extensions:{'io.modelcontextprotocol/ui':{}}};
 const legalPage = kind => {
@@ -116,7 +116,7 @@ const defs=[
  ['export_data','Export my data.',obj()],
  ['delete_my_data','Delete all my data after explicit confirmation.',obj({confirm:{type:'string',enum:['DELETE']}},['confirm'])]
 ];
-const tools=defs.map(([name,description,inputSchema])=>({name,description,inputSchema,...(name==='open_task_panel'?{_meta:{ui:{resourceUri:URI},'openai/ui':{entrypoints:[{type:'thread'}]}}}:{})}));
+const tools=defs.map(([name,description,inputSchema])=>({name,description,inputSchema,...(name==='open_task_panel'?{_meta:{ui:{resourceUri:URI},'openai/outputTemplate':URI,'openai/ui':{entrypoints:[{type:'thread'}]}}}:{})}));
 const rpc=(id,result)=>response({jsonrpc:'2.0',id,result}),err=(id,code,message)=>response({jsonrpc:'2.0',id,error:{code,message}});
 async function mcp(req,env){
   let body;try{body=await req.json()}catch{return err(null,-32700,'Parse error')}
@@ -126,8 +126,8 @@ async function mcp(req,env){
   if(method==='initialize')return rpc(id,{protocolVersion:params.protocolVersion||'2026-07-28',capabilities:CAPABILITIES,serverInfo:{name:'task-companion',version:'1.0.0'}});
   if(method==='ping')return rpc(id,{});
   if(method==='tools/list')return rpc(id,{tools});
-  if(method==='resources/list')return rpc(id,{resources:[{uri:URI,name:'Task Companion',mimeType:UI_MIME}]});
-  if(method==='resources/read')return params.uri===URI?rpc(id,{contents:[{uri:URI,mimeType:UI_MIME,text:PANEL}]}):err(id,-32602,'Unknown resource');
+  if(method==='resources/list')return rpc(id,{resources:[{uri:URI,name:'task-companion-panel',title:'Task Companion',mimeType:UI_MIME}]});
+  if(method==='resources/read')return params.uri===URI?rpc(id,{contents:[{uri:URI,mimeType:UI_MIME,text:PANEL,_meta:{ui:{prefersBorder:true},'openai/widgetDescription':'Bilingual task tree and progress beside this conversation.'}}]}):err(id,-32602,'Unknown resource');
   if(method==='tools/call'){
     if(!defs.some(x=>x[0]===params.name))return err(id,-32602,'Unknown tool');
     try{const data=await action(env,user(req),params.name,params.arguments||{});return rpc(id,{content:[{type:'text',text:JSON.stringify(data)}],structuredContent:data})}
