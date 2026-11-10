@@ -12,7 +12,8 @@
 <main id="root"></main>
 <script id="app-script">
 const embedded=!!window.TASK_COMPANION_EMBEDDED;
-let locale=localStorage.getItem('tc-locale')||'zh',data=null,projectId=localStorage.getItem('tc-project')||'',status='',loading=true;
+const storage={get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}},remove(k){try{localStorage.removeItem(k)}catch{}}};
+let locale=storage.get('tc-locale')||'zh',data=null,projectId=storage.get('tc-project')||'',status='',loading=true;
 let rpcId=0;const pending=new Map();
 const bridgeReady=embedded&&!window.openai?.callTool?new Promise((resolve,reject)=>{const id=++rpcId;pending.set(id,{resolve,reject});parent.postMessage({jsonrpc:'2.0',id,method:'ui/initialize',params:{appInfo:{name:'task-companion',version:'1.0.0'},appCapabilities:{},protocolVersion:'2026-01-26'}},'*')}).then(()=>parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized',params:{}},'*')):Promise.resolve();
 addEventListener('message',e=>{if(e.source!==parent||e.data?.jsonrpc!=='2.0')return;const p=pending.get(e.data.id);if(p){pending.delete(e.data.id);e.data.error?p.reject(e.data.error):p.resolve(e.data.result)}});
@@ -23,7 +24,7 @@ const W={
 const $=id=>document.getElementById(id),w=()=>W[locale],label=x=>locale==='en'?x.title_en||x.title_zh:x.title_zh;
 function unpack(x){if(x?.structuredContent)return x.structuredContent;const t=x?.content?.find(c=>c.type==='text')?.text;if(t){try{return JSON.parse(t)}catch{throw Error(t)}}return x}
 async function bridge(name,args){if(window.openai?.callTool)return unpack(await window.openai.callTool(name,args));await bridgeReady;return unpack(await new Promise((resolve,reject)=>{const id=++rpcId;pending.set(id,{resolve,reject});parent.postMessage({jsonrpc:'2.0',id,method:'tools/call',params:{name,arguments:args}},'*')}))}
-async function api(name,args={}){try{let result;if(embedded)result=await bridge(name,args);else{const r=await fetch(name==='get_tasks'?'/api/state'+(args.project_id?'?project_id='+encodeURIComponent(args.project_id):''):'/api/action',{method:name==='get_tasks'?'GET':'POST',headers:name==='get_tasks'?{}:{'content-type':'application/json'},body:name==='get_tasks'?undefined:JSON.stringify({name,args})});result=await r.json();if(!r.ok)throw Error(result.error||r.status)}if(result?.error)throw Error(result.error);if(result?.projects){data=result;loading=false;projectId=data.project?.id||'';localStorage.setItem('tc-project',projectId);status=w().saved;render()}return result}catch(e){if(name==='get_tasks'&&args.project_id&&/Project not found/.test(String(e.message||e))){projectId='';localStorage.removeItem('tc-project');return api('get_tasks',{})}loading=false;status=w().error+String(e.message||e);render();throw e}}
+async function api(name,args={}){try{let result;if(embedded)result=await bridge(name,args);else{const r=await fetch(name==='get_tasks'?'/api/state'+(args.project_id?'?project_id='+encodeURIComponent(args.project_id):''):'/api/action',{method:name==='get_tasks'?'GET':'POST',headers:name==='get_tasks'?{}:{'content-type':'application/json'},body:name==='get_tasks'?undefined:JSON.stringify({name,args})});result=await r.json();if(!r.ok)throw Error(result.error||r.status)}if(result?.error)throw Error(result.error);if(result?.projects){data=result;loading=false;projectId=data.project?.id||'';storage.set('tc-project',projectId);status=w().saved;render()}return result}catch(e){if(name==='get_tasks'&&args.project_id&&/Project not found/.test(String(e.message||e))){projectId='';storage.remove('tc-project');return api('get_tasks',{})}loading=false;status=w().error+String(e.message||e);render();throw e}}
 function btn(text,fn,extra=''){const b=document.createElement('button');b.className='btn '+extra;b.textContent=text;b.onclick=fn;return b}
 function selected(){return data?.tasks?.find(x=>x.id===data.project?.selected_task_id)}
 function leaves(){return (data?.tasks||[]).filter(x=>!data.tasks.some(y=>y.parent_id===x.id))}
@@ -64,7 +65,7 @@ async function deleteProject(){if(confirm(w().confirmProject))await api('delete_
 async function exportData(){const content=await api('export_data',{}),blob=new Blob([JSON.stringify(content,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='task-companion-export.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 async function eraseData(){if(prompt(w().confirmAll)!=='DELETE')return;await api('delete_my_data',{confirm:'DELETE'});await api('get_tasks',{})}
 async function continueChat(){const t=selected();if(!t){status=w().selected;render();return}const message=locale==='zh'?'请继续指导我完成“'+label(t)+'”。项目：'+label(data.project)+'。请先读取 Task Companion 的最新任务状态，只有我要求时才修改。':'Help me complete “'+label(t)+'” in “'+label(data.project)+'”. Read the latest Task Companion state first; change it only when I ask.';try{if(embedded&&window.openai?.sendFollowUpMessage){await window.openai.sendFollowUpMessage({prompt:message});status=w().sent}else{await navigator.clipboard.writeText(message);status=w().copied}render()}catch(e){status=w().error+e.message;render()}}
-$('lang').onclick=()=>{locale=locale==='zh'?'en':'zh';localStorage.setItem('tc-locale',locale);render()};
+$('lang').onclick=()=>{locale=locale==='zh'?'en':'zh';storage.set('tc-locale',locale);render()};
 render();api('get_tasks',projectId?{project_id:projectId}:{}).catch(()=>{data=null;render()});
 </script>
 </body></html>
