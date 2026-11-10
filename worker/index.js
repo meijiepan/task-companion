@@ -3,6 +3,7 @@ const PAGE = __PAGE__;
 const PANEL = __PANEL__;
 const URI = 'ui://task-companion/panel.html';
 const UI_MIME = 'text/html;profile=mcp-app';
+const CAPABILITIES = {tools:{},resources:{},extensions:{'io.modelcontextprotocol/ui':{}}};
 const legalPage = kind => {
   const privacy = kind==='privacy', support=kind==='support';
   const heading=privacy?'Privacy / 隐私':support?'Support / 支持':'Terms / 使用条款';
@@ -121,8 +122,8 @@ async function mcp(req,env){
   let body;try{body=await req.json()}catch{return err(null,-32700,'Parse error')}
   const {id,method,params={}}=body||{};if(!method)return err(id??null,-32600,'Invalid request');
   if(method==='notifications/initialized')return new Response(null,{status:204});
-  if(method==='server/discover')return rpc(id,{supportedVersions:['2026-07-28'],capabilities:{tools:{},resources:{}}});
-  if(method==='initialize')return rpc(id,{protocolVersion:'2025-06-18',capabilities:{tools:{},resources:{}},serverInfo:{name:'task-companion',version:'1.0.0'}});
+  if(method==='server/discover')return rpc(id,{supportedVersions:['2026-07-28'],capabilities:CAPABILITIES});
+  if(method==='initialize')return rpc(id,{protocolVersion:params.protocolVersion||'2026-07-28',capabilities:CAPABILITIES,serverInfo:{name:'task-companion',version:'1.0.0'}});
   if(method==='ping')return rpc(id,{});
   if(method==='tools/list')return rpc(id,{tools});
   if(method==='resources/list')return rpc(id,{resources:[{uri:URI,name:'Task Companion',mimeType:UI_MIME}]});
